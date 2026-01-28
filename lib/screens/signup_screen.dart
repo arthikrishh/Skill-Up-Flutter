@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
@@ -30,6 +31,37 @@ class _SignupScreenState extends State<SignupScreen> {
     _phoneController.dispose();
     super.dispose();
   }
+
+  @override
+void initState() {
+  super.initState();
+  // Add a listener to debug provider changes
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    authProvider.addListener(() {
+      print('AuthProvider changed!');
+      print('Error: ${authProvider.errorMessage}');
+      print('Loading: ${authProvider.isLoading}');
+       testFirebase();
+    });
+  });
+}
+
+Future<void> testFirebase() async {
+  try {
+    await FirebaseFirestore.instance
+        .collection('test')
+        .doc('connection')
+        .set({
+      'status': 'connected',
+      'time': DateTime.now().toString(),
+    });
+
+    debugPrint("✅ Firebase Connected Successfully");
+  } catch (e) {
+    debugPrint("❌ Firebase Error: $e");
+  }
+}
 
   void _showTermsDialog() {
     showDialog(

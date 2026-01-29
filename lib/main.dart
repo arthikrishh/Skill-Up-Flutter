@@ -32,6 +32,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => CartProvider()),
       ],
       child: MaterialApp(
+        debugShowCheckedModeBanner: false,
         title: 'Polaroid Prints',
         theme: ThemeData(
           primarySwatch: Colors.deepOrange,
@@ -43,15 +44,15 @@ class MyApp extends StatelessWidget {
           ),
         ),
         home: const AuthWrapper(),
-      // Add to routes in main.dart:
-routes: {
-  '/login': (context) => const LoginScreen(),
-  '/signup': (context) => const SignupScreen(),
-  '/home': (context) => const HomeScreen(),
-  '/cart': (context) => const CartScreen(),
-  '/checkout': (context) => const CheckoutScreen(),
-  '/orders': (context) => const OrdersScreen(),
-},
+        // Add to routes in main.dart:
+        routes: {
+          '/login': (context) => const LoginScreen(),
+          '/signup': (context) => const SignupScreen(),
+          '/home': (context) => const HomeScreen(),
+          '/cart': (context) => const CartScreen(),
+          '/checkout': (context) => const CheckoutScreen(),
+          '/orders': (context) => const OrdersScreen(),
+        },
       ),
     );
   }
@@ -66,16 +67,14 @@ class AuthWrapper extends StatelessWidget {
       builder: (context, authProvider, child) {
         if (authProvider.isLoading) {
           return const Scaffold(
-            body: Center(
-              child: CircularProgressIndicator(),
-            ),
+            body: Center(child: CircularProgressIndicator()),
           );
         }
-        
+
         if (authProvider.currentUser != null) {
           return const HomeScreen();
         }
-        
+
         return const LoginScreen();
       },
     );

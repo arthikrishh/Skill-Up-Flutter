@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/cart_service.dart';
 import '../models/cart_item_model.dart';
-import 'dart:io';
 
 class CartProvider extends ChangeNotifier {
   final CartService _cartService = CartService();
@@ -23,23 +22,23 @@ class CartProvider extends ChangeNotifier {
   }
 
   CartProvider() {
-    _loadCartItems();
+    // Initialize cart items
+    _initializeCart();
   }
 
-  // Load cart items
-  Future<void> _loadCartItems() async {
+  // Initialize cart
+  Future<void> _initializeCart() async {
     try {
       _cartService.getCartItems().listen((items) {
         _cartItems = items;
         notifyListeners();
       });
     } catch (e) {
-      _errorMessage = e.toString();
-      notifyListeners();
+      print('Error initializing cart: $e');
     }
   }
 
-  // Add to cart
+  // Add to cart - SIMPLIFIED VERSION FOR TESTING
   Future<bool> addToCart({
     required String productId,
     required String productName,
@@ -56,28 +55,37 @@ class CartProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // Convert image paths to Files
-      List<File> images = [];
-      for (var path in imagePaths) {
-        images.add(File(path));
-      }
+      print('🛒 CartProvider.addToCart called');
+      print('📦 Product: $productName');
+      print('💰 Price: $price');
+      print('📷 Images: ${imagePaths.length}');
+      print('🔢 Quantity: $quantity');
 
-      await _cartService.addToCart(
+      // Create a temporary cart item (for testing without Firebase)
+      final cartItem = CartItemModel(
+        id: '${productId}_${DateTime.now().millisecondsSinceEpoch}',
         productId: productId,
         productName: productName,
         productImage: productImage,
         size: size,
         paperType: paperType,
         price: price,
-        images: images,
         quantity: quantity,
+        uploadedImages: [], // Empty for local storage
         specialInstructions: specialInstructions,
       );
 
+      // Add to local list (TEMPORARY - replace with actual storage)
+      _cartItems.add(cartItem);
+      
+      print('✅ Cart item created: ${cartItem.productName}');
+      print('📊 Cart now has ${_cartItems.length} items');
+
       _isLoading = false;
-      notifyListeners();
+      notifyListeners(); // THIS IS CRITICAL - notifies UI to update
       return true;
     } catch (e) {
+      print('🚨 Error in addToCart: $e');
       _errorMessage = e.toString();
       _isLoading = false;
       notifyListeners();
@@ -85,20 +93,17 @@ class CartProvider extends ChangeNotifier {
     }
   }
 
-  // Update quantity
-  Future<void> updateQuantity(String cartItemId, int quantity) async {
-    try {
-      await _cartService.updateQuantity(cartItemId, quantity);
-    } catch (e) {
-      _errorMessage = e.toString();
-      notifyListeners();
-    }
-  }
+  // Get cart items count
+  int get cartCount => _cartItems.length;
+
+  // Check if cart is empty
+  bool get isCartEmpty => _cartItems.isEmpty;
 
   // Remove from cart
   Future<void> removeFromCart(String cartItemId) async {
     try {
-      await _cartService.removeFromCart(cartItemId);
+      _cartItems.removeWhere((item) => item.id == cartItemId);
+      notifyListeners();
     } catch (e) {
       _errorMessage = e.toString();
       notifyListeners();
@@ -108,7 +113,8 @@ class CartProvider extends ChangeNotifier {
   // Clear cart
   Future<void> clearCart() async {
     try {
-      await _cartService.clearCart();
+      _cartItems.clear();
+      notifyListeners();
     } catch (e) {
       _errorMessage = e.toString();
       notifyListeners();
@@ -123,6 +129,11 @@ class CartProvider extends ChangeNotifier {
   // Clear error
   void clearError() {
     _errorMessage = null;
+    notifyListeners();
+  }
+
+  // Refresh cart
+  Future<void> refreshCart() async {
     notifyListeners();
   }
 }

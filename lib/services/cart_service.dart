@@ -27,55 +27,66 @@ class CartService {
   }
 
   // Add item to cart
-  Future<void> addToCart({
-    required String productId,
-    required String productName,
-    required String productImage,
-    required String size,
-    required String paperType,
-    required double price,
-    required List<File> images,
-    int quantity = 1,
-    String? specialInstructions,
-  }) async {
-    if (_auth.currentUser == null) {
-      throw 'Please login to add items to cart';
-    }
-
-    try {
-      // Upload images to Firebase Storage
-      List<String> imageUrls = [];
-      for (var i = 0; i < images.length; i++) {
-        final imageUrl = await _uploadImage(images[i]);
-        imageUrls.add(imageUrl);
-      }
-
-      // Create cart item
-      final cartItem = CartItemModel(
-        id: '${productId}_${DateTime.now().millisecondsSinceEpoch}',
-        productId: productId,
-        productName: productName,
-        productImage: productImage,
-        size: size,
-        paperType: paperType,
-        price: price,
-        quantity: quantity,
-        uploadedImages: imageUrls,
-        specialInstructions: specialInstructions,
-      );
-
-      // Add to Firestore
-      await _firestore
-          .collection('users')
-          .doc(_auth.currentUser!.uid)
-          .collection('cart')
-          .doc(cartItem.id)
-          .set(cartItem.toMap());
-    } catch (e) {
-      throw 'Failed to add item to cart: $e';
-    }
+ Future<void> addToCart({
+  required String productId,
+  required String productName,
+  required String productImage,
+  required String size,
+  required String paperType,
+  required double price,
+  required List<File> images,  // This expects List<File>
+  int quantity = 1,
+  String? specialInstructions,
+}) async {
+  if (_auth.currentUser == null) {
+    throw 'Please login to add items to cart';
   }
 
+  try {
+    print('🛒 Starting cart addition...');
+    print('📁 Images to upload: ${images.length}');
+    
+    // Upload images to Firebase Storage
+    List<String> imageUrls = [];
+    for (var i = 0; i < images.length; i++) {
+      print('📤 Uploading image ${i + 1}/${images.length}...');
+      final imageUrl = await _uploadImage(images[i]);
+      imageUrls.add(imageUrl);
+      print('✅ Image ${i + 1} uploaded: $imageUrl');
+    }
+
+    // Create cart item
+    final cartItem = CartItemModel(
+      id: '${productId}_${DateTime.now().millisecondsSinceEpoch}',
+      productId: productId,
+      productName: productName,
+      productImage: productImage,
+      size: size,
+      paperType: paperType,
+      price: price,
+      quantity: quantity,
+      uploadedImages: imageUrls,
+      specialInstructions: specialInstructions,
+    );
+
+    print('📝 Cart item created: ${cartItem.toMap()}');
+    
+    // Add to Firestore
+    await _firestore
+        .collection('users')
+        .doc(_auth.currentUser!.uid)
+        .collection('cart')
+        .doc(cartItem.id)
+        .set(cartItem.toMap());
+    
+    print('✅ Cart item added to Firestore successfully!');
+    
+  } catch (e, stackTrace) {
+    print('🚨 Error in addToCart: $e');
+    print('📋 Stack trace: $stackTrace');
+    throw 'Failed to add item to cart: $e';
+  }
+}
   // Update cart item quantity
   Future<void> updateQuantity(String cartItemId, int quantity) async {
     if (_auth.currentUser == null) return;

@@ -10,6 +10,7 @@ class CartItemModel {
   final List<String> uploadedImages;
   final String? specialInstructions;
   final DateTime addedAt;
+  final List<String>? localImagePaths; 
 
   CartItemModel({
     required this.id,
@@ -21,6 +22,7 @@ class CartItemModel {
     required this.price,
     required this.quantity,
     required this.uploadedImages,
+     this.localImagePaths,
     this.specialInstructions,
     DateTime? addedAt,
   }) : addedAt = addedAt ?? DateTime.now();
@@ -39,6 +41,7 @@ class CartItemModel {
       'price': price,
       'quantity': quantity,
       'uploadedImages': uploadedImages,
+        'localImagePaths': localImagePaths ?? [],
       'specialInstructions': specialInstructions,
       'addedAt': addedAt.toIso8601String(),
     };
@@ -56,6 +59,7 @@ class CartItemModel {
       quantity: map['quantity'] ?? 1,
       uploadedImages: List<String>.from(map['uploadedImages'] ?? []),
       specialInstructions: map['specialInstructions'],
+       localImagePaths: List<String>.from(map['localImagePaths'] ?? []),
       addedAt: map['addedAt'] != null 
           ? DateTime.parse(map['addedAt']) 
           : DateTime.now(),
@@ -72,6 +76,7 @@ class CartItemModel {
     double? price,
     int? quantity,
     List<String>? uploadedImages,
+    List<String>? localImagePaths,
     String? specialInstructions,
     DateTime? addedAt,
   }) {
@@ -85,6 +90,7 @@ class CartItemModel {
       price: price ?? this.price,
       quantity: quantity ?? this.quantity,
       uploadedImages: uploadedImages ?? this.uploadedImages,
+      localImagePaths: uploadedImages ?? this.uploadedImages,
       specialInstructions: specialInstructions ?? this.specialInstructions,
       addedAt: addedAt ?? this.addedAt,
     );

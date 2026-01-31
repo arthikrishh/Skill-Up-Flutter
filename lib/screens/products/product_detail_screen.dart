@@ -144,68 +144,46 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     );
   }
 
-  void _addToCart(BuildContext context) async {
-    if (_selectedImages.isEmpty) {
-      _showSnackBar('📸 Please select at least one image!', Colors.orange);
-      return;
-    }
-
-    final cartProvider = Provider.of<CartProvider>(context, listen: false);
-
-    print('🎯 Starting add to cart process...');
-    print('🖼️ Selected images: ${_selectedImages.length}');
-    print('📦 Product: ${widget.product.name}');
-    print('💰 Price: ${widget.product.finalPrice}');
-    print('🔢 Quantity: $_quantity');
-
-    try {
-      // Convert XFile to List<String> paths
-      List<String> imagePaths =
-          _selectedImages.map((xfile) => xfile.path).toList();
-
-      final success = await cartProvider.addToCart(
-        productId: widget.product.id,
-        productName: widget.product.name,
-        productImage:
-            widget.product.imageUrls.isNotEmpty
-                ? widget.product.imageUrls.first
-                : 'https://via.placeholder.com/150',
-        size: widget.product.size,
-        paperType: _selectedPaperType!,
-        price: widget.product.finalPrice,
-        imagePaths: imagePaths,
-        quantity: _quantity,
-        specialInstructions: _specialInstructionsController.text,
-      );
-
-      if (success && mounted) {
-        print('✅ SUCCESS: Item added to cart!');
-        print('📊 Cart should now have items');
-
-        // Show success dialog
-        _showSuccessDialog(context);
-
-        // Also show a snackbar for confirmation
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('✅ Successfully added to cart!'),
-            backgroundColor: Colors.green,
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 2),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-        );
-      } else {
-        print('❌ FAILED: addToCart returned false');
-        _showSnackBar('Failed to add to cart. Please try again.', Colors.red);
-      }
-    } catch (e) {
-      print('🚨 ERROR: $e');
-      _showSnackBar('Error: ${e.toString()}', Colors.red);
-    }
+ void _addToCart(BuildContext context) async {
+  if (_selectedImages.isEmpty) {
+    _showSnackBar('📸 Please select at least one image!', Colors.orange);
+    return;
   }
+
+  final cartProvider = Provider.of<CartProvider>(context, listen: false);
+  
+  try {
+    // Convert XFile to List<String> paths
+    List<String> imagePaths = _selectedImages.map((xfile) => xfile.path).toList();
+    
+    print('🛒 Adding to Firestore cart with ${imagePaths.length} images...');
+    
+    final success = await cartProvider.addToCart(
+      productId: widget.product.id,
+      productName: widget.product.name,
+      productImage: widget.product.imageUrls.isNotEmpty 
+          ? widget.product.imageUrls.first 
+          : 'https://via.placeholder.com/150',
+      size: widget.product.size,
+      paperType: _selectedPaperType!,
+      price: widget.product.finalPrice,
+      imagePaths: imagePaths, // Pass image paths
+      quantity: _quantity,
+      specialInstructions: _specialInstructionsController.text,
+    );
+
+    if (success && mounted) {
+      print('✅ SUCCESS: Item saved to Firestore cart!');
+      
+      _showSuccessDialog(context);
+    } else {
+      _showSnackBar('Failed to add to cart. Please try again.', Colors.red);
+    }
+  } catch (e) {
+    print('🚨 ERROR: $e');
+    _showSnackBar('Error: ${e.toString()}', Colors.red);
+  }
+}
 
   void _showSuccessDialog(BuildContext context) {
     showModalBottomSheet(

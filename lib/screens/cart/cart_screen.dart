@@ -14,123 +14,29 @@ class CartScreen extends StatefulWidget {
 }
 
 class _CartScreenState extends State<CartScreen> {
-  final Map<String, List<File>> _cachedImages = {};
-
   @override
   void initState() {
     super.initState();
-    _preloadImages();
+    // Refresh cart when screen loads
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final cartProvider = context.read<CartProvider>();
+      cartProvider.refreshCart();
+    });
   }
 
-  Future<void> _preloadImages() async {
-    // In a real implementation, you would load images from local storage
-    // For now, we'll handle them on-demand
-  }
-
-  Future<List<File>> _getLocalImages(String cartItemId) async {
-    // Try to get from cache first
-    if (_cachedImages.containsKey(cartItemId)) {
-      return _cachedImages[cartItemId]!;
-    }
-
-    // In a real implementation, you would load from your local storage service
-    // For now, return empty list and handle in UI
-    return [];
-  }
-
-  Widget _buildLocalImage(String imagePath) {
-    return FutureBuilder<bool>(
-      future: File(imagePath).exists(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return Container(
-            width: 60,
-            height: 60,
-            color: Colors.grey[200],
-            child: const Center(
-              child: SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
-            ),
-          );
-        }
-
-        if (snapshot.hasData && snapshot.data == true) {
-          return Image.file(
-            File(imagePath),
-            width: 60,
-            height: 60,
-            fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) {
-              return Container(
-                width: 60,
-                height: 60,
-                color: Colors.grey[200],
-                child: const Icon(Icons.broken_image, color: Colors.grey),
-              );
-            },
-          );
-        }
-
-        // Image doesn't exist
-        return Container(
-          width: 60,
-          height: 60,
-          color: Colors.grey[200],
-          child: const Icon(Icons.photo, color: Colors.grey),
-        );
-      },
-    );
-  }
-
-  Widget _buildImagePlaceholder(int count) {
-    return Container(
-      width: 60,
-      height: 60,
-      decoration: BoxDecoration(
-        color: const Color(0xFF7B61FF).withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(
-            Icons.photo_library,
-            size: 20,
-            color: Color(0xFF7B61FF),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            '$count',
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF7B61FF),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showImageDialog(List<String> imagePaths) {
-    if (imagePaths.isEmpty) return;
-
+  void _showImageDialog(List<String> imageUrls) {
     showDialog(
       context: context,
       builder: (context) {
         return Dialog(
-          backgroundColor: Colors.transparent,
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           child: Container(
             constraints: BoxConstraints(
               maxWidth: MediaQuery.of(context).size.width * 0.9,
               maxHeight: MediaQuery.of(context).size.height * 0.7,
-            ),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -155,24 +61,53 @@ class _CartScreenState extends State<CartScreen> {
                   ),
                 ),
                 Expanded(
-                  child: imagePaths.length == 1
-                      ? Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: _buildLocalImage(imagePaths.first),
-                        )
-                      : GridView.builder(
-                          padding: const EdgeInsets.all(16),
-                          gridDelegate:
-                              const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            crossAxisSpacing: 10,
-                            mainAxisSpacing: 10,
+                  child: imageUrls.isEmpty
+                      ? const Center(
+                          child: Text(
+                            'No images available',
+                            style: TextStyle(color: Colors.grey),
                           ),
-                          itemCount: imagePaths.length,
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.all(16),
+                          itemCount: imageUrls.length,
                           itemBuilder: (context, index) {
-                            return ClipRRect(
-                              borderRadius: BorderRadius.circular(10),
-                              child: _buildLocalImage(imagePaths[index]),
+                            final imageUrl = imageUrls[index];
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 16),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: Image.network(
+                                  imageUrl,
+                                  fit: BoxFit.cover,
+                                  width: double.infinity,
+                                  height: 200,
+                                  loadingBuilder: (context, child, loadingProgress) {
+                                    if (loadingProgress == null) return child;
+                                    return Container(
+                                      height: 200,
+                                      color: Colors.grey[200],
+                                      child: const Center(
+                                        child: CircularProgressIndicator(),
+                                      ),
+                                    );
+                                  },
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Container(
+                                      height: 200,
+                                      color: Colors.grey[200],
+                                      child: const Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Icon(Icons.broken_image, size: 50, color: Colors.grey),
+                                          SizedBox(height: 8),
+                                          Text('Failed to load image'),
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
                             );
                           },
                         ),
@@ -180,7 +115,119 @@ class _CartScreenState extends State<CartScreen> {
                 Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Text(
-                    '${imagePaths.length} photo(s) selected',
+                    '${imageUrls.length} photo(s)',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showLocalImagesDialog(List<String> imagePaths) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Container(
+            constraints: BoxConstraints(
+              maxWidth: MediaQuery.of(context).size.width * 0.9,
+              maxHeight: MediaQuery.of(context).size.height * 0.7,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Your Photos (Local)',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: imagePaths.isEmpty
+                      ? const Center(
+                          child: Text(
+                            'No images available',
+                            style: TextStyle(color: Colors.grey),
+                          ),
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.all(16),
+                          itemCount: imagePaths.length,
+                          itemBuilder: (context, index) {
+                            final imagePath = imagePaths[index];
+                            return FutureBuilder<bool>(
+                              future: File(imagePath).exists(),
+                              builder: (context, snapshot) {
+                                if (snapshot.connectionState == ConnectionState.waiting) {
+                                  return Container(
+                                    height: 200,
+                                    color: Colors.grey[200],
+                                    child: const Center(
+                                      child: CircularProgressIndicator(),
+                                    ),
+                                  );
+                                }
+                                
+                                if (snapshot.hasData && snapshot.data == true) {
+                                  return Container(
+                                    margin: const EdgeInsets.only(bottom: 16),
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(12),
+                                      child: Image.file(
+                                        File(imagePath),
+                                        fit: BoxFit.cover,
+                                        width: double.infinity,
+                                        height: 200,
+                                      ),
+                                    ),
+                                  );
+                                }
+                                
+                                return Container(
+                                  height: 200,
+                                  color: Colors.grey[200],
+                                  child: const Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.error, size: 50, color: Colors.grey),
+                                      SizedBox(height: 8),
+                                      Text('Image not found'),
+                                    ],
+                                  ),
+                                );
+                              },
+                            );
+                          },
+                        ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Text(
+                    '${imagePaths.length} photo(s) stored locally',
                     style: const TextStyle(
                       fontSize: 14,
                       color: Colors.grey,
@@ -259,6 +306,7 @@ class _CartScreenState extends State<CartScreen> {
             style: TextStyle(
               fontSize: isTotal ? 16 : 14,
               color: isTotal ? Colors.black : Colors.grey,
+              fontWeight: isTotal ? FontWeight.w600 : FontWeight.normal,
             ),
           ),
           Text(
@@ -266,7 +314,7 @@ class _CartScreenState extends State<CartScreen> {
             style: TextStyle(
               fontSize: isTotal ? 20 : 14,
               fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
-              color: isTotal ? Color(0xFF7B61FF) : Colors.black,
+              color: isTotal ? const Color(0xFF7B61FF) : Colors.black,
             ),
           ),
         ],
@@ -341,15 +389,19 @@ class _CartScreenState extends State<CartScreen> {
   }
 
   Widget _buildCartItem(BuildContext context, CartItemModel item, CartProvider cartProvider) {
-    // For now, we'll simulate having local images
-    // In real implementation, you would get these from your storage
-    final hasLocalImages = item.uploadedImages.isEmpty; // Simplified logic
+    // Check if images are local paths or URLs
+    final hasLocalImages = item.uploadedImages.isNotEmpty && 
+                          item.uploadedImages[0].startsWith('/');
+    final hasFirebaseImages = item.uploadedImages.isNotEmpty && 
+                            (item.uploadedImages[0].startsWith('http') || 
+                             item.uploadedImages[0].startsWith('https'));
     
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
       ),
+      elevation: 2,
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -360,28 +412,40 @@ class _CartScreenState extends State<CartScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Product Image
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: Image.network(
-                    item.productImage,
-                    width: 80,
-                    height: 80,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(
-                        width: 80,
-                        height: 80,
-                        decoration: BoxDecoration(
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    color: const Color(0xFF7B61FF).withOpacity(0.1),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.network(
+                      item.productImage,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
                           color: const Color(0xFF7B61FF).withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Icon(
-                          Icons.photo,
-                          size: 40,
-                          color: Color(0xFF7B61FF),
-                        ),
-                      );
-                    },
+                          child: const Center(
+                            child: Icon(
+                              Icons.photo,
+                              size: 40,
+                              color: Color(0xFF7B61FF),
+                            ),
+                          ),
+                        );
+                      },
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return const Center(
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Color(0xFF7B61FF),
+                          ),
+                        );
+                      },
+                    ),
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -413,13 +477,28 @@ class _CartScreenState extends State<CartScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            '\$${item.price.toStringAsFixed(2)} each',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF7B61FF),
-                            ),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '\$${item.price.toStringAsFixed(2)} each',
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF7B61FF),
+                                ),
+                              ),
+                              if (item.quantity > 1)
+                                const SizedBox(height: 4),
+                              if (item.quantity > 1)
+                                Text(
+                                  '\$${item.itemTotal.toStringAsFixed(2)} total',
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                            ],
                           ),
                           Container(
                             decoration: BoxDecoration(
@@ -450,92 +529,104 @@ class _CartScreenState extends State<CartScreen> {
             const SizedBox(height: 16),
 
             // Images section
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.grey[50],
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Row(
-                    children: [
-                      Icon(
-                        Icons.photo_library,
-                        size: 18,
-                        color: Color(0xFF7B61FF),
-                      ),
-                      SizedBox(width: 8),
-                      Text(
-                        'Your Photos',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black,
+            if (item.uploadedImages.isNotEmpty)
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey[50],
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(
+                          Icons.photo_library,
+                          size: 18,
+                          color: Color(0xFF7B61FF),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  
-                  if (hasLocalImages)
+                        SizedBox(width: 8),
+                        Text(
+                          'Your Photos',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    
                     GestureDetector(
                       onTap: () {
-                        // Show dialog with images
-                        // For now, show a message
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: const Text('Photos stored locally'),
-                            backgroundColor: const Color(0xFF7B61FF),
-                            behavior: SnackBarBehavior.floating,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                        );
+                        if (hasLocalImages) {
+                          _showLocalImagesDialog(item.uploadedImages);
+                        } else if (hasFirebaseImages) {
+                          _showImageDialog(item.uploadedImages);
+                        }
                       },
-                      child: _buildImagePlaceholder(item.quantity),
-                    )
-                  else if (item.uploadedImages.isNotEmpty)
-                    SizedBox(
-                      height: 70,
-                      child: ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: item.uploadedImages.length,
-                        itemBuilder: (context, index) {
-                          return GestureDetector(
-                            onTap: () => _showImageDialog(item.uploadedImages),
-                            child: Container(
-                              margin: EdgeInsets.only(
-                                right: index < item.uploadedImages.length - 1 ? 12 : 0,
-                              ),
-                              child: ClipRRect(
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: const Color(0xFF7B61FF).withOpacity(0.3),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 50,
+                              height: 50,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF7B61FF).withOpacity(0.1),
                                 borderRadius: BorderRadius.circular(8),
-                                child: Image.network(
-                                  item.uploadedImages[index],
-                                  width: 70,
-                                  height: 70,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return Container(
-                                      width: 70,
-                                      height: 70,
-                                      color: Colors.grey[200],
-                                      child: const Icon(Icons.broken_image,
-                                          color: Colors.grey),
-                                    );
-                                  },
-                                ),
+                              ),
+                              child: const Icon(
+                                Icons.photo_library,
+                                size: 24,
+                                color: Color(0xFF7B61FF),
                               ),
                             ),
-                          );
-                        },
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    '${item.uploadedImages.length} photo(s) selected',
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    hasLocalImages 
+                                      ? 'Tap to view local photos'
+                                      : 'Tap to view uploaded photos',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const Icon(
+                              Icons.chevron_right,
+                              color: Color(0xFF7B61FF),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                ],
+                  ],
+                ),
               ),
-            ),
 
             // Special Instructions
             if (item.specialInstructions != null &&
@@ -587,6 +678,7 @@ class _CartScreenState extends State<CartScreen> {
                         color: Colors.grey,
                       ),
                     ),
+                    const SizedBox(height: 4),
                     Text(
                       '\$${item.itemTotal.toStringAsFixed(2)}',
                       style: const TextStyle(
@@ -601,18 +693,52 @@ class _CartScreenState extends State<CartScreen> {
                 // Actions
                 Row(
                   children: [
-                    OutlinedButton(
+                    // Quantity controls
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.grey[100],
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: Colors.grey[300]!),
+                      ),
+                      child: Row(
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.remove, size: 18),
+                            onPressed: () {
+                              if (item.quantity > 1) {
+                                cartProvider.updateQuantity(item.id, item.quantity - 1);
+                              }
+                            },
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            child: Text(
+                              '${item.quantity}',
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.add, size: 18),
+                            onPressed: () {
+                              cartProvider.updateQuantity(item.id, item.quantity + 1);
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    // Remove button
+                    IconButton(
+                      icon: const Icon(
+                        Icons.delete_outline,
+                        color: Colors.red,
+                      ),
                       onPressed: () {
                         _showRemoveItemDialog(context, item.id, cartProvider);
                       },
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.red,
-                        side: const BorderSide(color: Colors.red),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      child: const Text('Remove'),
                     ),
                   ],
                 ),
@@ -694,6 +820,46 @@ class _CartScreenState extends State<CartScreen> {
             );
           }
 
+          if (cartProvider.errorMessage != null) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.error_outline,
+                    size: 60,
+                    color: Colors.red,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Error loading cart',
+                    style: TextStyle(
+                      fontSize: 18,
+                      color: Colors.grey[800],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 32.0),
+                    child: Text(
+                      cartProvider.errorMessage!,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.grey),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton(
+                    onPressed: () {
+                      cartProvider.clearError();
+                      cartProvider.refreshCart();
+                    },
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            );
+          }
+
           if (cartProvider.cartItems.isEmpty) {
             return _buildEmptyCart();
           }
@@ -705,13 +871,7 @@ class _CartScreenState extends State<CartScreen> {
                 child: RefreshIndicator(
                   color: const Color(0xFF7B61FF),
                   onRefresh: () async {
-                    // Since _loadCartItems is private, we'll just trigger a state change
-                    // by calling a public method or rebuilding
-                    // For now, we'll just reload the cart provider
-                    final cartProvider = context.read<CartProvider>();
-                    // You might need to add a public refresh method to CartProvider
-                    // For now, let's just notify listeners
-                    cartProvider.notifyListeners();
+                    await cartProvider.refreshCart();
                   },
                   child: ListView.builder(
                     padding: const EdgeInsets.all(16),

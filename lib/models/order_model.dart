@@ -62,27 +62,53 @@ class OrderModel {
   }
 
   factory OrderModel.fromMap(Map<String, dynamic> map) {
-    return OrderModel(
-      id: map['id'] ?? '',
-      userId: map['userId'] ?? '',
-      items: List<CartItemModel>.from(
+  // Handle items conversion safely
+  List<CartItemModel> items = [];
+  if (map['items'] != null && map['items'] is List) {
+    try {
+      items = List<CartItemModel>.from(
         (map['items'] as List).map((item) => CartItemModel.fromMap(item)),
-      ),
-      subtotal: (map['subtotal'] as num).toDouble(),
-      shippingFee: (map['shippingFee'] as num).toDouble(),
-      tax: (map['tax'] as num).toDouble(),
-      totalAmount: (map['totalAmount'] as num).toDouble(),
-      status: map['status'] ?? 'pending',
-      shippingAddress: map['shippingAddress'] ?? '',
-      paymentMethod: map['paymentMethod'] ?? '',
-      trackingNumber: map['trackingNumber'],
-      orderDate: map['orderDate'] != null 
-          ? DateTime.parse(map['orderDate']) 
-          : DateTime.now(),
-      deliveryDate: map['deliveryDate'] != null 
-          ? DateTime.parse(map['deliveryDate']) 
-          : null,
-      specialInstructions: map['specialInstructions'],
-    );
+      );
+    } catch (e) {
+      print('Error parsing cart items: $e');
+      items = [];
+    }
   }
+
+  // Parse dates safely
+  DateTime orderDate;
+  try {
+    orderDate = map['orderDate'] != null 
+        ? DateTime.parse(map['orderDate']) 
+        : DateTime.now();
+  } catch (e) {
+    orderDate = DateTime.now();
+  }
+
+  DateTime? deliveryDate;
+  if (map['deliveryDate'] != null) {
+    try {
+      deliveryDate = DateTime.parse(map['deliveryDate']);
+    } catch (e) {
+      deliveryDate = null;
+    }
+  }
+
+  return OrderModel(
+    id: map['id']?.toString() ?? '',
+    userId: map['userId']?.toString() ?? '',
+    items: items,
+    subtotal: (map['subtotal'] as num?)?.toDouble() ?? 0.0,
+    shippingFee: (map['shippingFee'] as num?)?.toDouble() ?? 0.0,
+    tax: (map['tax'] as num?)?.toDouble() ?? 0.0,
+    totalAmount: (map['totalAmount'] as num?)?.toDouble() ?? 0.0,
+    status: map['status']?.toString() ?? 'pending',
+    shippingAddress: map['shippingAddress']?.toString() ?? '',
+    paymentMethod: map['paymentMethod']?.toString() ?? '',
+    trackingNumber: map['trackingNumber']?.toString(),
+    orderDate: orderDate,
+    deliveryDate: deliveryDate,
+    specialInstructions: map['specialInstructions']?.toString(),
+  );
+}
 }

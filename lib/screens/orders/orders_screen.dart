@@ -34,9 +34,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('My Orders'),
-      ),
+      appBar: AppBar(title: const Text('My Orders')),
       body: StreamBuilder<List<OrderModel>>(
         stream: _orderService.getUserOrders(),
         builder: (context, snapshot) {
@@ -45,9 +43,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
           }
 
           if (snapshot.hasError) {
-            return Center(
-              child: Text('Error: ${snapshot.error}'),
-            );
+            return Center(child: Text('Error: ${snapshot.error}'));
           }
 
           final orders = snapshot.data ?? [];
@@ -116,79 +112,74 @@ class _OrdersScreenState extends State<OrdersScreen> {
                 Chip(
                   label: Text(
                     order.status.toUpperCase(),
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Colors.white,
-                    ),
+                    style: const TextStyle(fontSize: 12, color: Colors.white),
                   ),
                   backgroundColor: _getStatusColor(order.status),
                 ),
               ],
             ),
             const SizedBox(height: 12),
-            
+
             // Order Items Preview
             Column(
-              children: order.items.take(2).map((item) {
-                return ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: Image.network(
-                      item.productImage,
-                      width: 50,
-                      height: 50,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
+              children:
+                  order.items.take(2).map((item) {
+                    return ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: ClipRRect(
+                        borderRadius: BorderRadius.circular(4),
+                        child: Image.network(
+                          item.productImage,
                           width: 50,
                           height: 50,
-                          color: Colors.grey[200],
-                          child: const Icon(Icons.photo, color: Colors.grey),
-                        );
-                      },
-                    ),
-                  ),
-                  title: Text(
-                    item.productName,
-                    style: const TextStyle(fontSize: 14),
-                  ),
-                  subtitle: Text(
-                    '${item.size} • ${item.quantity} × \$${item.price.toStringAsFixed(2)}',
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                  trailing: Text(
-                    '\$${item.itemTotal.toStringAsFixed(2)}',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                );
-              }).toList(),
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              width: 50,
+                              height: 50,
+                              color: Colors.grey[200],
+                              child: const Icon(
+                                Icons.photo,
+                                color: Colors.grey,
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      title: Text(
+                        item.productName,
+                        style: const TextStyle(fontSize: 14),
+                      ),
+                      subtitle: Text(
+                        '${item.size} • ${item.quantity} × \$${item.price.toStringAsFixed(2)}',
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                      trailing: Text(
+                        '\$${item.itemTotal.toStringAsFixed(2)}',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    );
+                  }).toList(),
             ),
-            
+
             if (order.items.length > 2)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8.0),
                 child: Text(
                   '+ ${order.items.length - 2} more item(s)',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey,
-                  ),
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
                 ),
               ),
-            
+
             const Divider(height: 20),
-            
+
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Total',
-                      style: TextStyle(color: Colors.grey),
-                    ),
+                    const Text('Total', style: TextStyle(color: Colors.grey)),
                     const SizedBox(height: 4),
                     Text(
                       '\$${order.totalAmount.toStringAsFixed(2)}',
@@ -260,7 +251,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            
+
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -274,35 +265,29 @@ class _OrdersScreenState extends State<OrdersScreen> {
                 Chip(
                   label: Text(
                     order.status.toUpperCase(),
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Colors.white,
-                    ),
+                    style: const TextStyle(fontSize: 12, color: Colors.white),
                   ),
                   backgroundColor: _getStatusColor(order.status),
                 ),
               ],
             ),
-            
+
             const SizedBox(height: 16),
-            
+
             _buildDetailRow('Order ID', order.id),
             _buildDetailRow('Order Date', _dateFormat.format(order.orderDate)),
             _buildDetailRow('Payment Method', order.paymentMethod),
-            
+
             const SizedBox(height: 16),
             const Divider(),
             const SizedBox(height: 16),
-            
+
             const Text(
               'Items',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
-            
+
             ...order.items.map((item) {
               return ListTile(
                 contentPadding: EdgeInsets.zero,
@@ -330,46 +315,46 @@ class _OrdersScreenState extends State<OrdersScreen> {
                 ),
               );
             }).toList(),
-            
+
             const SizedBox(height: 16),
             const Divider(),
             const SizedBox(height: 16),
-            
+
             const Text(
               'Order Summary',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
-            
-            _buildSummaryRow('Subtotal', '\$${order.subtotal.toStringAsFixed(2)}'),
-            _buildSummaryRow('Shipping', '\$${order.shippingFee.toStringAsFixed(2)}'),
+
+            _buildSummaryRow(
+              'Subtotal',
+              '\$${order.subtotal.toStringAsFixed(2)}',
+            ),
+            _buildSummaryRow(
+              'Shipping',
+              '\$${order.shippingFee.toStringAsFixed(2)}',
+            ),
             _buildSummaryRow('Tax', '\$${order.tax.toStringAsFixed(2)}'),
-            
+
             const Divider(height: 20),
-            
+
             _buildSummaryRow(
               'Total',
               '\$${order.totalAmount.toStringAsFixed(2)}',
               isTotal: true,
             ),
-            
+
             const SizedBox(height: 16),
             const Divider(),
             const SizedBox(height: 16),
-            
+
             if (order.specialInstructions != null)
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
                     'Special Instructions',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
                   Container(
@@ -383,22 +368,19 @@ class _OrdersScreenState extends State<OrdersScreen> {
                   const SizedBox(height: 16),
                 ],
               ),
-            
+
             const Text(
               'Shipping Address',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             Text(
               order.shippingAddress,
               style: const TextStyle(color: Colors.grey),
             ),
-            
+
             const SizedBox(height: 32),
-            
+
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
@@ -409,7 +391,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                 child: const Text('Track Order'),
               ),
             ),
-            
+
             const SizedBox(height: 16),
           ],
         ),
@@ -423,14 +405,8 @@ class _OrdersScreenState extends State<OrdersScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            label,
-            style: const TextStyle(color: Colors.grey),
-          ),
-          Text(
-            value,
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
+          Text(label, style: const TextStyle(color: Colors.grey)),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
         ],
       ),
     );
@@ -465,41 +441,42 @@ class _OrdersScreenState extends State<OrdersScreen> {
   void _showCancelDialog(String orderId) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Cancel Order'),
-        content: const Text('Are you sure you want to cancel this order?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('No'),
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Cancel Order'),
+            content: const Text('Are you sure you want to cancel this order?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('No'),
+              ),
+              TextButton(
+                onPressed: () async {
+                  Navigator.pop(context);
+                  final success = await _orderService.cancelOrder(orderId);
+                  if (success) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Order cancelled successfully'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Failed to cancel order'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                },
+                child: const Text(
+                  'Yes, Cancel',
+                  style: TextStyle(color: Colors.red),
+                ),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              final success = await _orderService.cancelOrder(orderId);
-              if (success) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Order cancelled successfully'),
-                    backgroundColor: Colors.green,
-                  ),
-                );
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Failed to cancel order'),
-                    backgroundColor: Colors.red,
-                  ),
-                );
-              }
-            },
-            child: const Text(
-              'Yes, Cancel',
-              style: TextStyle(color: Colors.red),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

@@ -11,6 +11,8 @@ class UserModel {
   final List<String>? favoriteProducts;
   final List<String>? cartItems;
   final Map<String, int>? cartQuantities; // productId -> quantity
+  final String? bio; // Add this
+  final DateTime updatedAt;
 
   UserModel({
     required this.uid,
@@ -24,7 +26,9 @@ class UserModel {
     this.addresses,
     this.favoriteProducts,
     this.cartItems,
-    this.cartQuantities,
+    this.bio,
+    this.cartQuantities, 
+    required this.updatedAt,
   });
 
   // Convert to Map for Firestore
@@ -41,6 +45,7 @@ class UserModel {
       'addresses': addresses ?? [],
       'favoriteProducts': favoriteProducts ?? [],
       'cartItems': cartItems ?? [],
+      'bio': bio ?? '', // Provide default empty string
       'cartQuantities': cartQuantities ?? {},
       'updatedAt': DateTime.now().toIso8601String(),
     };
@@ -54,6 +59,7 @@ class UserModel {
       displayName: map['displayName'],
       phoneNumber: map['phoneNumber'],
       photoURL: map['photoURL'],
+      bio: map['bio'],
       createdAt: DateTime.parse(map['createdAt']),
       lastLoginAt: map['lastLoginAt'] != null 
           ? DateTime.parse(map['lastLoginAt']) 
@@ -63,6 +69,7 @@ class UserModel {
       favoriteProducts: List<String>.from(map['favoriteProducts'] ?? []),
       cartItems: List<String>.from(map['cartItems'] ?? []),
       cartQuantities: Map<String, int>.from(map['cartQuantities'] ?? {}),
+      updatedAt: DateTime.parse(map['updatedAt']),
     );
   }
 
@@ -74,12 +81,14 @@ class UserModel {
     String? phoneNumber,
     String? photoURL,
     DateTime? createdAt,
+    DateTime? updatedAt,
     DateTime? lastLoginAt,
     bool? emailVerified,
     List<String>? addresses,
     List<String>? favoriteProducts,
     List<String>? cartItems,
     Map<String, int>? cartQuantities,
+
   }) {
     return UserModel(
       uid: uid ?? this.uid,
@@ -88,6 +97,7 @@ class UserModel {
       phoneNumber: phoneNumber ?? this.phoneNumber,
       photoURL: photoURL ?? this.photoURL,
       createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
       lastLoginAt: lastLoginAt ?? this.lastLoginAt,
       emailVerified: emailVerified ?? this.emailVerified,
       addresses: addresses ?? this.addresses,

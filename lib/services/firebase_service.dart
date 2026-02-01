@@ -51,7 +51,7 @@ class FirebaseService {
         displayName: name.trim(),
         phoneNumber: phone?.trim(),
         createdAt: DateTime.now(),
-        lastLoginAt: DateTime.now(),
+        lastLoginAt: DateTime.now(), updatedAt: DateTime.now(),
       );
 
       await _saveUserToFirestore(userModel);
@@ -127,7 +127,8 @@ class FirebaseService {
           phoneNumber: userCredential.user!.phoneNumber,
           createdAt: DateTime.now(),
           lastLoginAt: DateTime.now(),
-          emailVerified: userCredential.user!.emailVerified,
+          emailVerified: userCredential.user!.emailVerified, updatedAt: DateTime.now(),
+          
         );
         
         await _saveUserToFirestore(userModel);
@@ -143,7 +144,7 @@ class FirebaseService {
             phoneNumber: userCredential.user!.phoneNumber,
             createdAt: DateTime.now(),
             lastLoginAt: DateTime.now(),
-            emailVerified: userCredential.user!.emailVerified,
+            emailVerified: userCredential.user!.emailVerified, updatedAt: DateTime.now(),
           );
       }
 

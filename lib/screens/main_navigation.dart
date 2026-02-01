@@ -32,12 +32,7 @@ class _MainNavigationState extends State<MainNavigation> {
     super.dispose();
   }
 
-  void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-      _pageController.jumpToPage(index);
-    });
-  }
+  
 
   @override
   @override

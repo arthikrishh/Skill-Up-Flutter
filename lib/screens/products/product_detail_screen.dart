@@ -262,14 +262,18 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: ElevatedButton(
-                      onPressed: () {
-  Navigator.pop(context);
+onPressed: () {
+  // Pop until we reach the MainNavigation
+  Navigator.popUntil(context, (route) {
+    return route.settings.name == '/main' || route.isFirst;
+  });
   
-  // Navigate to cart using provider
-  final navProvider = context.read<NavigationProvider>();
-  navProvider.navigateToTab(1);
-},
-                        style: ElevatedButton.styleFrom(
+  // Then navigate to cart tab
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    final navProvider = context.read<NavigationProvider>();
+    navProvider.navigateToTab(1);
+  });
+},                  style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF7B61FF),
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(

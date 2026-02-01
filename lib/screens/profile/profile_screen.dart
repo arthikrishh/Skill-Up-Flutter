@@ -1,6 +1,9 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:skill_up_flutter/constants/app_colors.dart';
+import 'package:skill_up_flutter/models/user_model.dart';
 import 'package:skill_up_flutter/providers/auth_provider.dart';
 import 'package:skill_up_flutter/screens/auth/login_screen.dart';
 import 'package:skill_up_flutter/screens/profile/edit_profile_screen.dart';
@@ -18,18 +21,53 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Consumer<AuthProvider>(
       builder: (context, authProvider, child) {
         final user = authProvider.currentUser;
-        
+
         if (user == null) {
           return const Center(
-            child: Text('Please login to view profile'),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.person_off, size: 60, color: Colors.grey),
+                SizedBox(height: 16),
+                Text(
+                  'Please login to view profile',
+                  style: TextStyle(fontSize: 16, color: Colors.grey),
+                ),
+              ],
+            ),
           );
+        }
+
+        // Check for local profile image
+        String? profileImagePath;
+        bool hasLocalImage = false;
+        if (user.photoURL != null && user.photoURL!.isNotEmpty) {
+          if (user.photoURL!.startsWith('/')) {
+            final file = File(user.photoURL!);
+            if (file.existsSync()) {
+              profileImagePath = user.photoURL;
+              hasLocalImage = true;
+            }
+          }
         }
 
         return Scaffold(
           appBar: AppBar(
             title: const Text('Profile'),
             centerTitle: true,
-           
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.edit),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const EditProfileScreen(),
+                    ),
+                  );
+                },
+              ),
+            ],
           ),
           body: SingleChildScrollView(
             padding: const EdgeInsets.all(20),
@@ -55,12 +93,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       Stack(
                         children: [
                           Container(
-                            width: 100,
-                            height: 100,
+                            width: 120,
+                            height: 120,
+                            margin: const EdgeInsets.only(bottom: 20),
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               gradient: LinearGradient(
-                                colors: [AppColors.primary, AppColors.secondary],
+                                colors: [
+                                  AppColors.primary,
+                                  AppColors.secondary,
+                                ],
                                 begin: Alignment.topLeft,
                                 end: Alignment.bottomRight,
                               ),
@@ -72,32 +114,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 ),
                               ],
                             ),
-                            child: Center(
-                              child: Text(
-                                user.displayName?.substring(0, 1).toUpperCase() ?? 'U',
-                                style: const TextStyle(
-                                  fontSize: 40,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ),
+                            child: hasLocalImage && profileImagePath != null
+                                ? ClipOval(
+                                    child: Image.file(
+                                      File(profileImagePath!),
+                                      fit: BoxFit.cover,
+                                      width: double.infinity,
+                                      height: double.infinity,
+                                      errorBuilder: (context, error, stackTrace) {
+                                        return _buildDefaultAvatar(user);
+                                      },
+                                    ),
+                                  )
+                                : _buildDefaultAvatar(user),
                           ),
                           Positioned(
-                            bottom: 0,
+                            bottom: 15,
                             right: 0,
                             child: GestureDetector(
-                              onTap: () {
-                                _showChangePhotoDialog();
-                              },
+                              onTap: _showChangePhotoDialog,
                               child: Container(
                                 padding: const EdgeInsets.all(8),
                                 decoration: BoxDecoration(
-                                  color: Colors.white,
+                                  color: AppColors.primary,
                                   shape: BoxShape.circle,
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Colors.grey.withOpacity(0.3),
+                                      color: Colors.black.withOpacity(0.2),
                                       blurRadius: 10,
                                       offset: const Offset(0, 4),
                                     ),
@@ -105,7 +148,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 ),
                                 child: const Icon(
                                   Icons.camera_alt,
-                                  color: AppColors.primary,
+                                  color: Colors.white,
                                   size: 20,
                                 ),
                               ),
@@ -113,7 +156,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 20),
                       
                       // User Name
                       Text(
@@ -125,7 +167,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                       ),
                       const SizedBox(height: 5),
-                      
+
                       // User Email
                       Text(
                         user.email,
@@ -135,109 +177,138 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                       ),
                       const SizedBox(height: 5),
-                      
+
                       // Verification Status
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(
-                            user.emailVerified ? 
-                              Icons.verified : Icons.warning,
-                            color: user.emailVerified ? 
-                              Colors.green : Colors.orange,
+                            user.emailVerified ? Icons.verified : Icons.warning,
+                            color: user.emailVerified
+                                ? Colors.green
+                                : Colors.orange,
                             size: 16,
                           ),
                           const SizedBox(width: 5),
                           Text(
-                            user.emailVerified ? 
-                              'Verified Account' : 'Not Verified',
+                            user.emailVerified
+                                ? 'Verified Account'
+                                : 'Not Verified',
                             style: TextStyle(
-                              color: user.emailVerified ? 
-                                Colors.green : Colors.orange,
+                              color: user.emailVerified
+                                  ? Colors.green
+                                  : Colors.orange,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
                         ],
+                      ),
+                      
+                      // Member Since
+                      const SizedBox(height: 10),
+                      Text(
+                        'Member since ${_formatDate(user.createdAt)}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[500],
+                        ),
                       ),
                     ],
                   ),
                 ),
                 
                 const SizedBox(height: 30),
+
+                // Account Settings Section
+                _buildSectionHeader('Account Settings'),
+                const SizedBox(height: 10),
                 
-                // Menu Items
-                Column(
-                  children: [
-                  _buildMenuTile(
-  icon: Icons.person_outline,
-  title: 'Personal Information',
-  subtitle: 'Update your personal details',
-  onTap: () {
-    // REMOVE the dialog and use the full screen
-    // _showEditProfileDialog(context, authProvider, user); // REMOVE THIS
-    
-    // ADD this instead:
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const EditProfileScreen(),
-      ),
-    );
-  },
-),
-                    _buildMenuTile(
-                      icon: Icons.location_on_outlined,
-                      title: 'Shipping Addresses',
-                      subtitle: 'Manage your delivery addresses',
-                      onTap: () {
-                        _showShippingAddresses();
-                      },
-                    ),
-                    _buildMenuTile(
-                      icon: Icons.credit_card_outlined,
-                      title: 'Payment Methods',
-                      subtitle: 'Manage your payment options',
-                      onTap: () {
-                        _showPaymentMethods();
-                      },
-                    ),
-                    _buildMenuTile(
-                      icon: Icons.notifications_outlined,
-                      title: 'Notifications',
-                      subtitle: 'Manage your notification preferences',
-                      onTap: () {
-                        _showNotificationSettings();
-                      },
-                    ),
-                    _buildMenuTile(
-                      icon: Icons.security_outlined,
-                      title: 'Privacy & Security',
-                      subtitle: 'Manage your privacy settings',
-                      onTap: () {
-                        _showPrivacySettings();
-                      },
-                    ),
-                    _buildMenuTile(
-                      icon: Icons.help_outline,
-                      title: 'Help & Support',
-                      subtitle: 'FAQ, Contact us, About us',
-                      onTap: () {
-                        _showHelpSupport();
-                      },
-                    ),
-                    _buildMenuTile(
-                      icon: Icons.settings_outlined,
-                      title: 'Settings',
-                      subtitle: 'App settings and preferences',
-                      onTap: () {
-                        _showAppSettings();
-                      },
-                    ),
-                  ],
+                _buildMenuTile(
+                  icon: Icons.person_outline,
+                  title: 'Personal Information',
+                  subtitle: 'Update your personal details',
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const EditProfileScreen(),
+                      ),
+                    );
+                  },
                 ),
-                
+                _buildMenuTile(
+                  icon: Icons.notifications_outlined,
+                  title: 'Notifications',
+                  subtitle: 'Manage your notification preferences',
+                  onTap: () {
+                    _showNotificationSettings();
+                  },
+                ),
+                _buildMenuTile(
+                  icon: Icons.security_outlined,
+                  title: 'Privacy & Security',
+                  subtitle: 'Manage your privacy settings',
+                  onTap: () {
+                    _showPrivacySettings();
+                  },
+                ),
+
                 const SizedBox(height: 30),
+
+                // Orders & Payments Section
+                _buildSectionHeader('Orders & Payments'),
+                const SizedBox(height: 10),
                 
+                _buildMenuTile(
+                  icon: Icons.shopping_bag_outlined,
+                  title: 'Order History',
+                  subtitle: 'View all your past orders',
+                  onTap: () {
+                    Navigator.pushNamed(context, '/orders');
+                  },
+                ),
+                _buildMenuTile(
+                  icon: Icons.location_on_outlined,
+                  title: 'Shipping Addresses',
+                  subtitle: 'Manage your delivery addresses',
+                  onTap: () {
+                    _showShippingAddresses();
+                  },
+                ),
+                _buildMenuTile(
+                  icon: Icons.credit_card_outlined,
+                  title: 'Payment Methods',
+                  subtitle: 'Manage your payment options',
+                  onTap: () {
+                    _showPaymentMethods();
+                  },
+                ),
+
+                const SizedBox(height: 30),
+
+                // Support Section
+                _buildSectionHeader('Support'),
+                const SizedBox(height: 10),
+                
+                _buildMenuTile(
+                  icon: Icons.help_outline,
+                  title: 'Help & Support',
+                  subtitle: 'FAQ, Contact us, About us',
+                  onTap: () {
+                    _showHelpSupport();
+                  },
+                ),
+                _buildMenuTile(
+                  icon: Icons.settings_outlined,
+                  title: 'App Settings',
+                  subtitle: 'App preferences and configurations',
+                  onTap: () {
+                    _showAppSettings();
+                  },
+                ),
+
+                const SizedBox(height: 30),
+
                 // Sign Out Button
                 Container(
                   width: double.infinity,
@@ -274,9 +345,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ),
                 ),
-                
+
                 const SizedBox(height: 20),
-                
+
                 // Delete Account
                 TextButton(
                   onPressed: () {
@@ -290,9 +361,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ),
                 ),
-                
+
                 const SizedBox(height: 40),
-                
+
                 // App Version
                 Text(
                   'Polaroid Prints v1.0.0',
@@ -306,6 +377,43 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildDefaultAvatar(UserModel user) {
+    return Center(
+      child: Text(
+        user.displayName?.substring(0, 1).toUpperCase() ?? 'U',
+        style: const TextStyle(
+          fontSize: 40,
+          fontWeight: FontWeight.bold,
+          color: Colors.white,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(String title) {
+    return Row(
+      children: [
+        Container(
+          height: 20,
+          width: 4,
+          decoration: BoxDecoration(
+            color: AppColors.primary,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+            color: Colors.black87,
+          ),
+        ),
+      ],
     );
   }
 
@@ -399,7 +507,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 title: const Text('Take Photo'),
                 onTap: () {
                   Navigator.pop(context);
-                  // Implement camera functionality
+                  // Navigate to EditProfileScreen with camera option
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const EditProfileScreen(),
+                    ),
+                  );
                 },
               ),
               ListTile(
@@ -407,7 +521,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 title: const Text('Choose from Gallery'),
                 onTap: () {
                   Navigator.pop(context);
-                  // Implement gallery picker
+                  // Navigate to EditProfileScreen
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const EditProfileScreen(),
+                    ),
+                  );
                 },
               ),
               ListTile(
@@ -415,7 +535,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 title: const Text('Remove Photo'),
                 onTap: () {
                   Navigator.pop(context);
-                  // Implement remove photo
+                  _showRemovePhotoConfirmation();
                 },
               ),
               const SizedBox(height: 20),
@@ -431,8 +551,58 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  
-  void _showSignOutConfirmation(BuildContext context, AuthProvider authProvider) {
+  void _showRemovePhotoConfirmation() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Remove Profile Photo'),
+        content: const Text('Are you sure you want to remove your profile photo?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              final authProvider = context.read<AuthProvider>();
+              try {
+                await authProvider.deleteProfileImage();
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Profile photo removed successfully'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                  // Refresh the screen
+                  setState(() {});
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
+            },
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.red,
+            ),
+            child: const Text('Remove'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showSignOutConfirmation(
+    BuildContext context,
+    AuthProvider authProvider,
+  ) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -449,7 +619,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
               if (context.mounted) {
                 Navigator.pushAndRemoveUntil(
                   context,
-                  MaterialPageRoute(builder: (context) => const LoginScreen()),
+                  MaterialPageRoute(
+                    builder: (context) => const LoginScreen(),
+                  ),
                   (route) => false,
                 );
               }
@@ -464,7 +636,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  void _showDeleteAccountConfirmation(BuildContext context, AuthProvider authProvider) {
+  void _showDeleteAccountConfirmation(
+    BuildContext context,
+    AuthProvider authProvider,
+  ) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -480,7 +655,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           TextButton(
             onPressed: () {
-              // Implement delete account functionality
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
@@ -500,7 +674,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _showShippingAddresses() {
-    // Implement shipping addresses screen
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Shipping addresses feature coming soon!'),
@@ -509,7 +682,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _showPaymentMethods() {
-    // Implement payment methods screen
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Payment methods feature coming soon!'),
@@ -518,7 +690,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _showNotificationSettings() {
-    // Implement notification settings screen
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Notification settings feature coming soon!'),
@@ -527,7 +698,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _showPrivacySettings() {
-    // Implement privacy settings screen
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Privacy settings feature coming soon!'),
@@ -536,7 +706,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _showHelpSupport() {
-    // Implement help & support screen
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Help & support feature coming soon!'),
@@ -545,11 +714,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _showAppSettings() {
-    // Implement app settings screen
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('App settings feature coming soon!'),
       ),
     );
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.day}/${date.month}/${date.year}';
   }
 }

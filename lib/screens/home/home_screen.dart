@@ -379,27 +379,32 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               children: [
                 Row(
                   children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [AppColors.primary, AppColors.secondary],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(15),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.primary.withOpacity(0.3),
-                            blurRadius: 15,
-                            offset: const Offset(0, 5),
+                    InkWell(
+                      onTap: (){
+                          Navigator.pushNamed(context, '/orders');
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [AppColors.primary, AppColors.secondary],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
                           ),
-                        ],
-                      ),
-                      child: const Icon(
-                        Icons.camera_alt,
-                        color: Colors.white,
-                        size: 24,
+                          borderRadius: BorderRadius.circular(15),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.primary.withOpacity(0.3),
+                              blurRadius: 15,
+                              offset: const Offset(0, 5),
+                            ),
+                          ],
+                        ),
+                        child: const Icon(
+                          Icons.camera_alt,
+                          color: Colors.white,
+                          size: 24,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 12),

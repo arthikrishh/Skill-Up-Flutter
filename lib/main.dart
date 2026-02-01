@@ -1,27 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:skill_up_flutter/screens/home/home_screen.dart';
-import 'package:skill_up_flutter/screens/orders/orders_screen.dart';
-
-import 'providers/auth_provider.dart';
-import 'providers/cart_provider.dart';
-import 'providers/product_provider.dart';
-import 'screens/auth/login_screen.dart';
-import 'screens/auth/signup_screen.dart';
-import 'screens/cart/cart_screen.dart';
-import 'screens/products/product_detail_screen.dart';
-import 'screens/checkout/checkout_screen.dart';
+import 'package:skill_up_flutter/providers/auth_provider.dart';
+import 'package:skill_up_flutter/providers/cart_provider.dart';
+import 'package:skill_up_flutter/providers/product_provider.dart';
+import 'package:skill_up_flutter/screens/auth/login_screen.dart';
+import 'package:skill_up_flutter/screens/auth/signup_screen.dart';
+import 'package:skill_up_flutter/screens/main_navigation.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
   runApp(const MyApp());
 }
-    
+
 class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key); 
+  const MyApp({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -29,10 +23,9 @@ class MyApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => ProductProvider()),
-       ChangeNotifierProvider(create: (_) => CartProvider()),
+        ChangeNotifierProvider(create: (_) => CartProvider()),
       ],
       child: MaterialApp(
-        debugShowCheckedModeBanner: false,
         title: 'Polaroid Prints',
         theme: ThemeData(
           primarySwatch: Colors.deepOrange,
@@ -44,14 +37,10 @@ class MyApp extends StatelessWidget {
           ),
         ),
         home: const AuthWrapper(),
-        // Add to routes in main.dart:
         routes: {
           '/login': (context) => const LoginScreen(),
           '/signup': (context) => const SignupScreen(),
-          '/home': (context) => const HomeScreen(),
-          '/cart': (context) => const CartScreen(),
-          '/checkout': (context) => const CheckoutScreen(),
-          '/orders': (context) => const OrdersScreen(),
+          '/main': (context) => const MainNavigation(),
         },
       ),
     );
@@ -67,14 +56,16 @@ class AuthWrapper extends StatelessWidget {
       builder: (context, authProvider, child) {
         if (authProvider.isLoading) {
           return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
+            body: Center(
+              child: CircularProgressIndicator(),
+            ),
           );
         }
-
+        
         if (authProvider.currentUser != null) {
-          return const HomeScreen();
+          return const MainNavigation();
         }
-
+        
         return const LoginScreen();
       },
     );

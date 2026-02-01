@@ -2109,7 +2109,7 @@ class _OrderConfirmationScreenState extends State<OrderConfirmationScreen>
                             onPressed: () {
                               Navigator.pushNamedAndRemoveUntil(
                                 context,
-                                '/home',
+                                '/main',
                                 (route) => false,
                               );
                             },
@@ -2185,7 +2185,7 @@ class _OrderConfirmationScreenState extends State<OrderConfirmationScreen>
               onPressed: () {
                 Navigator.pushNamedAndRemoveUntil(
                   context,
-                  '/home',
+                  '/main',
                   (route) => false,
                 );
               },

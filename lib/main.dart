@@ -3,6 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
 import 'package:skill_up_flutter/providers/auth_provider.dart';
 import 'package:skill_up_flutter/providers/cart_provider.dart';
+import 'package:skill_up_flutter/providers/navigation_provider.dart';
 import 'package:skill_up_flutter/providers/product_provider.dart';
 import 'package:skill_up_flutter/screens/auth/login_screen.dart';
 import 'package:skill_up_flutter/screens/auth/signup_screen.dart';
@@ -21,6 +22,11 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
+ 
+    ChangeNotifierProvider(create: (_) => AuthProvider()),
+    ChangeNotifierProvider(create: (_) => ProductProvider()),
+    ChangeNotifierProvider(create: (_) => CartProvider()),
+    ChangeNotifierProvider(create: (_) => NavigationProvider()), // Add this
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => ProductProvider()),
         ChangeNotifierProvider(create: (_) => CartProvider()),

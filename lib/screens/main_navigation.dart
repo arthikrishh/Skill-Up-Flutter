@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:skill_up_flutter/providers/auth_provider.dart';
 import 'package:skill_up_flutter/providers/cart_provider.dart';
+import 'package:skill_up_flutter/providers/navigation_provider.dart';
 import 'package:skill_up_flutter/screens/cart/cart_screen.dart';
 import 'package:skill_up_flutter/screens/home/home_screen.dart';
 import 'package:skill_up_flutter/screens/orders/orders_screen.dart';
@@ -39,24 +40,26 @@ class _MainNavigationState extends State<MainNavigation> {
   }
 
   @override
+  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: PageView(
-        controller: _pageController,
-        physics: const NeverScrollableScrollPhysics(),
-        children: _screens,
-        onPageChanged: (index) {
-          setState(() {
-            _selectedIndex = index;
-          });
-        },
-      ),
-      bottomNavigationBar: _buildBottomNavigationBar(),
+    return Consumer<NavigationProvider>(
+      builder: (context, navProvider, child) {
+        return Scaffold(
+          body: PageView(
+            controller: navProvider.pageController,
+            physics: const NeverScrollableScrollPhysics(),
+            children: _screens,
+            onPageChanged: (index) {
+              navProvider.navigateToTab(index);
+            },
+          ),
+          bottomNavigationBar: _buildBottomNavigationBar(navProvider),
+        );
+      },
     );
   }
-
   // **UPDATED METHOD WITH CART BADGE**
-  Widget _buildBottomNavigationBar() {
+  Widget _buildBottomNavigationBar(NavigationProvider navProvider) {
     return Container(
       decoration: BoxDecoration(
         boxShadow: [
@@ -78,9 +81,12 @@ class _MainNavigationState extends State<MainNavigation> {
             final cartItemCount = _calculateCartItemCount(cartProvider);
             
             return BottomNavigationBar(
+                currentIndex: navProvider.currentIndex,
+        onTap: (index) {
+          navProvider.navigateToTab(index);
+        },
               type: BottomNavigationBarType.fixed,
-              currentIndex: _selectedIndex,
-              onTap: _onItemTapped,
+           
               backgroundColor: Colors.white,
               selectedItemColor: Colors.deepOrange,
               unselectedItemColor: Colors.grey,

@@ -3,6 +3,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'dart:io';
 import 'package:confetti/confetti.dart';
+import 'package:skill_up_flutter/providers/navigation_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../models/product_model.dart';
 
@@ -261,10 +262,13 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: ElevatedButton(
-                        onPressed: () {
-                          Navigator.pop(context);
-                          Navigator.pushNamed(context, '/cart');
-                        },
+                      onPressed: () {
+  Navigator.pop(context);
+  
+  // Navigate to cart using provider
+  final navProvider = context.read<NavigationProvider>();
+  navProvider.navigateToTab(1);
+},
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF7B61FF),
                           padding: const EdgeInsets.symmetric(vertical: 16),

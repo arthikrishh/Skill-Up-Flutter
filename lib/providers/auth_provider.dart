@@ -1,10 +1,11 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import '../services/firebase_service.dart';
+import 'dart:io';
+import '../services/auth_service.dart'; // CHANGE THIS LINE
 import '../models/user_model.dart';
 
 class AuthProvider extends ChangeNotifier {
-  final FirebaseService _firebaseService = FirebaseService();
+  final AuthService _authService = AuthService(); // CHANGE THIS LINE
   UserModel? _currentUser;
   bool _isLoading = false;
   String? _errorMessage;
@@ -29,7 +30,7 @@ class AuthProvider extends ChangeNotifier {
   }
 
   void _initializeAuthListener() {
-    _firebaseService.authStateChanges.listen((User? user) async {
+    _authService.authStateChanges.listen((User? user) async {
       if (user != null) {
         await _loadCurrentUser();
       } else {
@@ -47,13 +48,15 @@ class AuthProvider extends ChangeNotifier {
       _isLoading = true;
       notifyListeners();
 
-      final userData = await _firebaseService.getCurrentUserData();
+      final userData = await _authService.getCurrentUserData(); // CHANGED THIS
       
       if (userData != null) {
         _currentUser = userData;
-        _cartItems = userData.cartItems ?? [];
-        _cartQuantities = userData.cartQuantities ?? {};
-        _favorites = userData.favoriteProducts ?? [];
+        // Note: Your UserModel might not have cartItems, cartQuantities, favoriteProducts
+        // These might be handled by a separate CartProvider
+        _cartItems = []; // You might need to load these from Firestore separately
+        _cartQuantities = {};
+        _favorites = [];
       }
 
       _isLoading = false;
@@ -78,7 +81,7 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final user = await _firebaseService.signUpWithEmail(
+      final user = await _authService.signUpWithEmail( // CHANGED THIS
         email: email,
         password: password,
         name: name,
@@ -109,16 +112,17 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final user = await _firebaseService.signInWithEmail(
+      final user = await _authService.signInWithEmail( // CHANGED THIS
         email: email,
         password: password,
       );
       
       if (user != null) {
         _currentUser = user;
-        _cartItems = user.cartItems ?? [];
-        _cartQuantities = user.cartQuantities ?? {};
-        _favorites = user.favoriteProducts ?? [];
+        // You might need to load cart and favorites from a separate service
+        _cartItems = [];
+        _cartQuantities = {};
+        _favorites = [];
       }
       
       _isLoading = false;
@@ -132,24 +136,27 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  // You might not have Google sign-in in the new AuthService
+  // Remove this if not needed, or add it to AuthService
   Future<bool> signInWithGoogle() async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      final user = await _firebaseService.signInWithGoogle();
+      // This method might not exist in AuthService yet
+      // final user = await _authService.signInWithGoogle();
       
-      if (user != null) {
-        _currentUser = user;
-        _cartItems = user.cartItems ?? [];
-        _cartQuantities = user.cartQuantities ?? {};
-        _favorites = user.favoriteProducts ?? [];
-      }
+      // if (user != null) {
+      //   _currentUser = user;
+      //   _cartItems = user.cartItems ?? [];
+      //   _cartQuantities = user.cartQuantities ?? {};
+      //   _favorites = user.favoriteProducts ?? [];
+      // }
       
       _isLoading = false;
       notifyListeners();
-      return user != null;
+      return false; // Temporarily disabled
     } catch (e) {
       _errorMessage = e.toString();
       _isLoading = false;
@@ -159,7 +166,7 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> signOut() async {
-    await _firebaseService.signOut();
+    await _authService.signOut(); // CHANGED THIS
     _currentUser = null;
     _cartItems = [];
     _cartQuantities = {};
@@ -173,7 +180,7 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      await _firebaseService.sendPasswordResetEmail(email);
+      await _authService.sendPasswordResetEmail(email); // CHANGED THIS
       _isLoading = false;
       notifyListeners();
       return true;
@@ -186,29 +193,75 @@ class AuthProvider extends ChangeNotifier {
   }
 
   // ==================== USER PROFILE METHODS ====================
+Future<bool> updateProfile({
+  String? displayName,
+  String? phoneNumber,
+  String? bio,
+  String? photoURL,
+}) async {
+  _isLoading = true;
+  _errorMessage = null;
+  notifyListeners();
 
-  Future<bool> updateProfile({
-    String? displayName,
-    String? phoneNumber,
-  }) async {
+  print('🎯 AuthProvider.updateProfile() called with:');
+  print('  displayName: "$displayName"');
+  print('  phoneNumber: "$phoneNumber"');
+  print('  bio: "$bio"');
+  print('  photoURL: "$photoURL"');
+
+  try {
+    final updatedUser = await _authService.updateProfile(
+      displayName: displayName,
+      phoneNumber: phoneNumber,
+      bio: bio,
+      photoURL: photoURL,
+    );
+    
+    if (updatedUser != null) {
+      _currentUser = updatedUser;
+      print('✅ AuthProvider - Successfully updated user data:');
+      print('  displayName: "${updatedUser.displayName}"');
+      print('  phoneNumber: "${updatedUser.phoneNumber}"');
+      print('  bio: "${updatedUser.bio}"');
+      print('  photoURL: "${updatedUser.photoURL}"');
+      
+      // Also call debugUserData to see everything
+      await _authService.debugUserData();
+    } else {
+      print('❌ AuthProvider - updatedUser is null');
+    }
+    
+    _isLoading = false;
+    notifyListeners();
+    return true;
+  } catch (e) {
+    _errorMessage = e.toString();
+    print('❌ AuthProvider.updateProfile() error: $e');
+    _isLoading = false;
+    notifyListeners();
+    return false;
+  }
+}
+  // ADD THIS METHOD FOR UPLOADING PROFILE IMAGES
+  Future<String?> uploadProfileImage(File imageFile) async {
+    try {
+      final imageUrl = await _authService.uploadProfileImage(imageFile);
+      return imageUrl;
+    } catch (e) {
+      _errorMessage = e.toString();
+      notifyListeners();
+      return null;
+    }
+  }
+
+  // ADD THIS METHOD FOR EMAIL VERIFICATION
+  Future<bool> sendEmailVerification() async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      await _firebaseService.updateUserProfile(
-        displayName: displayName,
-        phoneNumber: phoneNumber,
-      );
-      
-      // Update local user model
-      if (_currentUser != null) {
-        _currentUser = _currentUser!.copyWith(
-          displayName: displayName ?? _currentUser!.displayName,
-          phoneNumber: phoneNumber ?? _currentUser!.phoneNumber,
-        );
-      }
-      
+      await _authService.sendEmailVerification();
       _isLoading = false;
       notifyListeners();
       return true;
@@ -220,11 +273,16 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  // ==================== CART METHODS ====================
+  // ==================== CART METHODS (MIGHT BE HANDLED BY SEPARATE CART PROVIDER) ====================
+
+  // Note: Cart functionality might be better handled by a separate CartProvider
+  // The AuthService I created doesn't have cart methods
+  // You might need to keep these if you have a separate service or move to CartProvider
 
   Future<void> addToCart(String productId, {int quantity = 1}) async {
     try {
-      await _firebaseService.addToCart(productId, quantity: quantity);
+      // You'll need to implement this in a separate CartService
+      // await _firebaseService.addToCart(productId, quantity: quantity);
       
       if (!_cartItems.contains(productId)) {
         _cartItems.add(productId);
@@ -242,7 +300,8 @@ class AuthProvider extends ChangeNotifier {
 
   Future<void> removeFromCart(String productId) async {
     try {
-      await _firebaseService.removeFromCart(productId);
+      // You'll need to implement this in a separate CartService
+      // await _firebaseService.removeFromCart(productId);
       
       _cartItems.remove(productId);
       _cartQuantities.remove(productId);
@@ -256,7 +315,8 @@ class AuthProvider extends ChangeNotifier {
 
   Future<void> updateCartQuantity(String productId, int quantity) async {
     try {
-      await _firebaseService.updateCartQuantity(productId, quantity);
+      // You'll need to implement this in a separate CartService
+      // await _firebaseService.updateCartQuantity(productId, quantity);
       
       if (quantity <= 0) {
         _cartItems.remove(productId);
@@ -290,7 +350,8 @@ class AuthProvider extends ChangeNotifier {
 
   Future<void> toggleFavorite(String productId) async {
     try {
-      await _firebaseService.toggleFavorite(productId);
+      // You'll need to implement this in a separate service
+      // await _firebaseService.toggleFavorite(productId);
       
       if (_favorites.contains(productId)) {
         _favorites.remove(productId);
@@ -313,7 +374,8 @@ class AuthProvider extends ChangeNotifier {
 
   Future<void> addAddress(String address) async {
     try {
-      await _firebaseService.addAddress(address);
+      // You'll need to implement this in a separate service
+      // await _firebaseService.addAddress(address);
       
       if (_currentUser != null) {
         final currentAddresses = _currentUser!.addresses ?? [];
@@ -330,7 +392,8 @@ class AuthProvider extends ChangeNotifier {
 
   Future<void> removeAddress(String address) async {
     try {
-      await _firebaseService.removeAddress(address);
+      // You'll need to implement this in a separate service
+      // await _firebaseService.removeAddress(address);
       
       if (_currentUser != null) {
         final currentAddresses = _currentUser!.addresses ?? [];

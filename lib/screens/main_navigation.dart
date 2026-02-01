@@ -16,7 +16,6 @@ class MainNavigation extends StatefulWidget {
 }
 
 class _MainNavigationState extends State<MainNavigation> {
-  int _selectedIndex = 0;
   final PageController _pageController = PageController();
 
   final List<Widget> _screens = [

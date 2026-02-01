@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:skill_up_flutter/constants/app_colors.dart';
 import 'package:skill_up_flutter/providers/auth_provider.dart';
 import 'package:skill_up_flutter/screens/auth/login_screen.dart';
+import 'package:skill_up_flutter/screens/profile/edit_profile_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -28,14 +29,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           appBar: AppBar(
             title: const Text('Profile'),
             centerTitle: true,
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.edit),
-                onPressed: () {
-                  _showEditProfileDialog(context, authProvider, user);
-                },
-              ),
-            ],
+           
           ),
           body: SingleChildScrollView(
             padding: const EdgeInsets.all(20),
@@ -174,14 +168,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 // Menu Items
                 Column(
                   children: [
-                    _buildMenuTile(
-                      icon: Icons.person_outline,
-                      title: 'Personal Information',
-                      subtitle: 'Update your personal details',
-                      onTap: () {
-                        _showEditProfileDialog(context, authProvider, user);
-                      },
-                    ),
+                  _buildMenuTile(
+  icon: Icons.person_outline,
+  title: 'Personal Information',
+  subtitle: 'Update your personal details',
+  onTap: () {
+    // REMOVE the dialog and use the full screen
+    // _showEditProfileDialog(context, authProvider, user); // REMOVE THIS
+    
+    // ADD this instead:
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const EditProfileScreen(),
+      ),
+    );
+  },
+),
                     _buildMenuTile(
                       icon: Icons.location_on_outlined,
                       title: 'Shipping Addresses',
@@ -428,82 +431,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  void _showEditProfileDialog(
-    BuildContext context, 
-    AuthProvider authProvider, 
-    dynamic user
-  ) {
-    final nameController = TextEditingController(text: user.name ?? '');
-    final phoneController = TextEditingController(text: user.phone ?? '');
-    final emailController = TextEditingController(text: user.email);
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Edit Profile'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextFormField(
-                  controller: nameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Full Name',
-                    prefixIcon: Icon(Icons.person),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: emailController,
-                  decoration: const InputDecoration(
-                    labelText: 'Email',
-                    prefixIcon: Icon(Icons.email),
-                  ),
-                  enabled: false,
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: phoneController,
-                  decoration: const InputDecoration(
-                    labelText: 'Phone Number',
-                    prefixIcon: Icon(Icons.phone),
-                  ),
-                  keyboardType: TextInputType.phone,
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                final success = await authProvider.updateProfile(
-                  displayName: nameController.text.trim(),
-                  phoneNumber: phoneController.text.trim(),
-                );
-                
-                if (success && context.mounted) {
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Profile updated successfully!'),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
-                }
-              },
-              child: const Text('Save'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
+  
   void _showSignOutConfirmation(BuildContext context, AuthProvider authProvider) {
     showDialog(
       context: context,

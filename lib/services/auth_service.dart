@@ -1,13 +1,14 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:skill_up_flutter/services/local_storage_service.dart';
 import 'dart:io';
 import '../models/user_model.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseStorage _storage = FirebaseStorage.instance;
+  final LocalStorageService _localStorage = LocalStorageService();
 
   // Get current user
   User? get currentUser => _auth.currentUser;
@@ -248,50 +249,54 @@ Future<void> debugUserData() async {
     print('Error debugging user data: $e');
   }
 }
-
-  // Upload profile image
-  Future<String> uploadProfileImage(File imageFile) async {
+ 
+ Future<String?> uploadProfileImage(File imageFile) async {
     try {
       if (_auth.currentUser == null) {
         throw 'User not authenticated';
       }
 
-      // Delete old profile image if exists
-      await _deleteOldProfileImage();
-
-      // Upload new image
-      final fileName = 'profile_${DateTime.now().millisecondsSinceEpoch}.jpg';
-      final ref = _storage.ref().child('users/${_auth.currentUser!.uid}/profile/$fileName');
-      
-      await ref.putFile(
-        imageFile,
-        SettableMetadata(contentType: 'image/jpeg'),
+      // Save to local storage instead of Firebase Storage
+      final filePath = await _localStorage.saveProfileImage(
+        imageFile, 
+        _auth.currentUser!.uid
       );
       
-      return await ref.getDownloadURL();
-    } catch (e) {
-      throw 'Failed to upload image: $e';
-    }
-  }
-
-  // Delete old profile images
-  Future<void> _deleteOldProfileImage() async {
-    try {
-      final listResult = await _storage
-          .ref()
-          .child('users/${_auth.currentUser!.uid}/profile')
-          .listAll();
-
-      // Delete all files in the profile folder
-      for (var item in listResult.items) {
-        await item.delete();
+      if (filePath == null) {
+        throw 'Failed to save image locally';
       }
+      
+      print('✅ Profile image saved locally at: $filePath');
+      
+      // Return the local file path
+      return filePath;
     } catch (e) {
-      // Ignore error if folder doesn't exist
-      print('No old profile images to delete: $e');
+      print('❌ Error saving profile image locally: $e');
+      rethrow;
+    }
+  }
+ 
+  // Get profile image from local storage
+  Future<File?> getProfileImage() async {
+    try {
+      return await _localStorage.getProfileImageFile();
+    } catch (e) {
+      print('❌ Error getting profile image: $e');
+      return null;
     }
   }
 
+// In AuthService class, add/update this method:
+Future<void> deleteProfileImage() async {
+  try {
+    // Call LocalStorageService to delete the image
+    await _localStorage.deleteProfileImage();
+    print('✅ Profile image deleted from local storage');
+  } catch (e) {
+    print('❌ Error deleting profile image from local storage: $e');
+    rethrow;
+  }
+}
   // Handle auth errors
   String _handleAuthError(FirebaseAuthException e) {
     switch (e.code) {

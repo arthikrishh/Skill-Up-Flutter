@@ -27,16 +27,40 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   String? _profileImageUrl;
   bool _emailVerified = false;
 
-  @override
+ @override
   void initState() {
     super.initState();
     _loadUserData();
-    
-    // Add debug to check Firestore data
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await _checkFirestoreDirectly();
-    });
+    _loadProfileImageFromLocal();
   }
+
+Future<void> _loadProfileImageFromLocal() async {
+  try {
+    final authProvider = context.read<AuthProvider>();
+    
+    // Try to get image from AuthProvider (which loads from local storage)
+    final imageFile = await authProvider.getProfileImage();
+    
+    if (imageFile != null && await imageFile.exists()) {
+      setState(() {
+        _profileImageUrl = imageFile.path;
+      });
+      print('✅ Loaded profile image from local storage: ${imageFile.path}');
+    } else {
+      // Check if user has photoURL from previous Firebase storage
+      final user = authProvider.currentUser;
+      if (user?.photoURL != null && user!.photoURL!.startsWith('http')) {
+        // This is a network URL from old Firebase storage
+        setState(() {
+          _profileImageUrl = user.photoURL;
+        });
+        print('✅ Loaded profile image from network: ${user.photoURL}');
+      }
+    }
+  } catch (e) {
+    print('❌ Error loading profile image from local: $e');
+  }
+}
 
   @override
   void dispose() {
@@ -122,126 +146,83 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     }
   }
 Future<void> _saveProfile() async {
-  if (!_formKey.currentState!.validate()) {
-    print('❌ Form validation failed');
-    return;
-  }
-
-  setState(() {
-    _isLoading = true;
-  });
-
-  print('💾 EditProfileScreen._saveProfile() called');
-  print('  Name: "${_nameController.text.trim()}"');
-  print('  Phone: "${_phoneController.text.trim()}"');
-  print('  Bio: "${_bioController.text.trim()}"');
-  print('  Has image: ${_profileImage != null}');
-
-  try {
-    final authProvider = context.read<AuthProvider>();
-    
-    // Upload profile image if selected
-    String? imageUrl = _profileImageUrl;
-    if (_profileImage != null) {
-      print('📤 Uploading new profile image...');
-      imageUrl = await authProvider.uploadProfileImage(_profileImage!);
-      if (imageUrl == null) {
-        throw 'Failed to upload profile image';
-      }
-      print('✅ New photoURL: $imageUrl');
+    if (!_formKey.currentState!.validate()) {
+      return;
     }
 
-    // Call updateProfile with correct parameters
-    print('🔄 Calling authProvider.updateProfile()...');
-    final success = await authProvider.updateProfile(
-      displayName: _nameController.text.trim(),
-      phoneNumber: _phoneController.text.trim(),
-      bio: _bioController.text.trim(),
-      photoURL: imageUrl,
-    );
+    setState(() {
+      _isLoading = true;
+    });
 
-    if (success) {
-      print('✅ Profile saved successfully!');
-      
-      // Check Firestore directly
-      await _checkFirestoreDirectly();
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Profile updated successfully!'),
-          backgroundColor: Colors.green,
-          duration: Duration(seconds: 2),
-        ),
-      );
-      
-      // Wait a bit before popping
-      await Future.delayed(const Duration(milliseconds: 1500));
-      
-      if (mounted) {
-        Navigator.pop(context);
-      }
-    } else {
-      final error = authProvider.errorMessage ?? 'Failed to update profile';
-      print('❌ Update returned false. Error: $error');
-      throw error;
-    }
-  } catch (e) {
-    print('❌ Save error: $e');
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error: $e'),
-          backgroundColor: Colors.red,
-          duration: const Duration(seconds: 3),
-        ),
-      );
-    }
-  } finally {
-    if (mounted) {
-      setState(() {
-        _isLoading = false;
-      });
-    }
-  }
-}
-
-  Future<void> _checkFirestoreDirectly() async {
     try {
       final authProvider = context.read<AuthProvider>();
-      final userId = authProvider.currentUser?.uid;
       
-      if (userId == null) {
-        print('❌ No user ID found');
-        return;
+      print('💾 Saving profile with:');
+      print('  displayName: "${_nameController.text.trim()}"');
+      print('  phoneNumber: "${_phoneController.text.trim()}"');
+      print('  bio: "${_bioController.text.trim()}"');
+      print('  Has new image: ${_profileImage != null}');
+      
+      // Upload profile image to local storage if selected
+      String? imageUrl = _profileImageUrl;
+      if (_profileImage != null) {
+        print('📤 Saving profile image to local storage...');
+        imageUrl = await authProvider.uploadProfileImage(_profileImage!);
+        if (imageUrl == null) {
+          throw 'Failed to save profile image locally';
+        }
+        print('✅ Image saved locally: $imageUrl');
       }
-      
-      print('🔥 CHECKING FIRESTORE DIRECTLY for user: $userId');
-      
-      final firestore = FirebaseFirestore.instance;
-      final doc = await firestore.collection('users').doc(userId).get();
-      
-      if (doc.exists) {
-        final data = doc.data()!;
-        print('📊 FIRESTORE DATA:');
-        print('  displayName: "${data['displayName']}"');
-        print('  phoneNumber: "${data['phoneNumber']}"');
-        print('  bio: "${data['bio']}"');
-        print('  photoURL: "${data['photoURL']}"');
-        print('  email: "${data['email']}"');
-        print('  emailVerified: ${data['emailVerified']}');
+
+      // Update profile in Firestore (without photoURL since it's local)
+      final success = await authProvider.updateProfile(
+        displayName: _nameController.text.trim(),
+        phoneNumber: _phoneController.text.trim(),
+        bio: _bioController.text.trim(),
+        photoURL: null, // Don't save local path to Firestore
+      );
+
+      if (success && mounted) {
+        print('✅ Profile saved successfully!');
         
-        // Check all fields in the document
-        print('📋 ALL FIELDS:');
-        data.forEach((key, value) {
-          print('  $key: "$value" (${value.runtimeType})');
-        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Profile updated successfully!'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+        
+        await Future.delayed(const Duration(milliseconds: 1500));
+        
+        if (mounted) {
+          Navigator.pop(context);
+        }
       } else {
-        print('❌ Document does not exist in Firestore');
+        throw authProvider.errorMessage ?? 'Failed to update profile';
       }
     } catch (e) {
-      print('❌ Error checking Firestore: $e');
+      print('❌ Save error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
+
+
+   
 
   Future<void> _resendVerificationEmail() async {
     try {
@@ -271,75 +252,145 @@ Future<void> _saveProfile() async {
   }
 
   void _showImagePickerDialog() {
-    showModalBottomSheet(
+  showModalBottomSheet(
+    context: context,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+    ),
+    builder: (context) {
+      return Container(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 10),
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              'Change Profile Picture',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 20),
+            ListTile(
+              leading: const Icon(Icons.camera_alt, color: Colors.blue),
+              title: const Text('Take Photo'),
+              onTap: () {
+                Navigator.pop(context);
+                _takePhoto();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library, color: Colors.green),
+              title: const Text('Choose from Gallery'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickImage();
+              },
+            ),
+            // Show remove option only if there's a profile image
+            if (_profileImage != null || 
+                (_profileImageUrl != null && _profileImageUrl!.isNotEmpty))
+              ListTile(
+                leading: const Icon(Icons.delete, color: Colors.red),
+                title: const Text('Remove Photo'),
+                onTap: () async {
+                  Navigator.pop(context);
+                  await _removeProfileImage();
+                },
+              ),
+            const SizedBox(height: 20),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            const SizedBox(height: 10),
+          ],
+        ),
+      );
+    },
+  );
+}
+
+
+Future<void> _removeProfileImage() async {
+  try {
+    final authProvider = context.read<AuthProvider>();
+    
+    // Show confirmation dialog
+    final shouldDelete = await showDialog<bool>(
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+      builder: (context) => AlertDialog(
+        title: const Text('Remove Profile Photo'),
+        content: const Text('Are you sure you want to remove your profile photo?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.red,
+            ),
+            child: const Text('Remove'),
+          ),
+        ],
       ),
-      builder: (context) {
-        return Container(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const SizedBox(height: 10),
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(height: 20),
-              const Text(
-                'Change Profile Picture',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 20),
-              ListTile(
-                leading: const Icon(Icons.camera_alt, color: Colors.blue),
-                title: const Text('Take Photo'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _takePhoto();
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.photo_library, color: Colors.green),
-                title: const Text('Choose from Gallery'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _pickImage();
-                },
-              ),
-              if (_profileImageUrl != null)
-                ListTile(
-                  leading: const Icon(Icons.delete, color: Colors.red),
-                  title: const Text('Remove Photo'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    setState(() {
-                      _profileImage = null;
-                      _profileImageUrl = null;
-                    });
-                  },
-                ),
-              const SizedBox(height: 20),
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
-              ),
-              const SizedBox(height: 10),
-            ],
+    );
+    
+    if (shouldDelete == true) {
+      // Show loading
+      setState(() {
+        _isLoading = true;
+      });
+      
+      await authProvider.deleteProfileImage();
+      
+      // Clear local state
+      setState(() {
+        _profileImage = null;
+        _profileImageUrl = null;
+        _isLoading = false;
+      });
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Profile photo removed successfully'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
           ),
         );
-      },
-    );
+      }
+    }
+  } catch (e) {
+    setState(() {
+      _isLoading = false;
+    });
+    
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error removing image: $e'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
   }
+}
+
+  
 
    
 
@@ -576,15 +627,35 @@ Future<void> _saveProfile() async {
     );
   }
 
-  Widget _buildProfileImage() {
-    if (_profileImage != null) {
-      return Image.file(
-        _profileImage!,
-        fit: BoxFit.cover,
-        width: double.infinity,
-        height: double.infinity,
-      );
-    } else if (_profileImageUrl != null && _profileImageUrl!.isNotEmpty) {
+    Widget _buildProfileImage() {
+  // 1. Check for newly selected image
+  if (_profileImage != null) {
+    return Image.file(
+      _profileImage!,
+      fit: BoxFit.cover,
+      width: double.infinity,
+      height: double.infinity,
+    );
+  }
+  
+  // 2. Check for local file path
+  if (_profileImageUrl != null && _profileImageUrl!.isNotEmpty) {
+    if (_profileImageUrl!.startsWith('/')) {
+      // Local file path
+      final file = File(_profileImageUrl!);
+      if (file.existsSync()) {
+        return Image.file(
+          file,
+          fit: BoxFit.cover,
+          width: double.infinity,
+          height: double.infinity,
+          errorBuilder: (context, error, stackTrace) {
+            return _buildDefaultAvatar();
+          },
+        );
+      }
+    } else if (_profileImageUrl!.startsWith('http')) {
+      // Network URL (from previous Firebase storage)
       return Image.network(
         _profileImageUrl!,
         fit: BoxFit.cover,
@@ -605,10 +676,12 @@ Future<void> _saveProfile() async {
           );
         },
       );
-    } else {
-      return _buildDefaultAvatar();
     }
   }
+  
+  // 3. Default avatar
+  return _buildDefaultAvatar();
+}
 
   Widget _buildDefaultAvatar() {
     final name = _nameController.text.isNotEmpty

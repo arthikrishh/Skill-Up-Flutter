@@ -45,7 +45,7 @@ class UserModel {
       'addresses': addresses ?? [],
       'favoriteProducts': favoriteProducts ?? [],
       'cartItems': cartItems ?? [],
-      'bio': bio ?? '', // Provide default empty string
+      'bio': bio, // Provide default empty string
       'cartQuantities': cartQuantities ?? {},
       'updatedAt': DateTime.now().toIso8601String(),
     };
@@ -83,6 +83,7 @@ class UserModel {
     DateTime? createdAt,
     DateTime? updatedAt,
     DateTime? lastLoginAt,
+    String? bio,
     bool? emailVerified,
     List<String>? addresses,
     List<String>? favoriteProducts,
@@ -94,6 +95,7 @@ class UserModel {
       uid: uid ?? this.uid,
       email: email ?? this.email,
       displayName: displayName ?? this.displayName,
+      bio: bio ?? this.bio,
       phoneNumber: phoneNumber ?? this.phoneNumber,
       photoURL: photoURL ?? this.photoURL,
       createdAt: createdAt ?? this.createdAt,

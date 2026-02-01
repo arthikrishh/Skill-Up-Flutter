@@ -43,20 +43,41 @@ class AuthProvider extends ChangeNotifier {
     });
   }
 
+// Add this method to AuthProvider class
+Future<void> deleteProfileImage() async {
+  try {
+    print('🗑️ Deleting profile image from local storage...');
+    
+    // Call AuthService to delete the image
+    await _authService.deleteProfileImage();
+    
+    // Update current user to remove photoURL
+    if (_currentUser != null) {
+      _currentUser = _currentUser!.copyWith(photoURL: null);
+      notifyListeners();
+    }
+    
+    print('✅ Profile image deleted successfully');
+  } catch (e) {
+    _errorMessage = e.toString();
+    print('❌ Error deleting profile image: $e');
+    notifyListeners();
+    rethrow;
+  }
+}
+
   Future<void> _loadCurrentUser() async {
     try {
       _isLoading = true;
       notifyListeners();
 
-      final userData = await _authService.getCurrentUserData(); // CHANGED THIS
+      final userData = await _authService.getCurrentUserData();
       
       if (userData != null) {
         _currentUser = userData;
-        // Note: Your UserModel might not have cartItems, cartQuantities, favoriteProducts
-        // These might be handled by a separate CartProvider
-        _cartItems = []; // You might need to load these from Firestore separately
-        _cartQuantities = {};
-        _favorites = [];
+        
+        // Load profile image from local storage
+        await _loadProfileImage();
       }
 
       _isLoading = false;
@@ -67,7 +88,6 @@ class AuthProvider extends ChangeNotifier {
       notifyListeners();
     }
   }
-
   // ==================== AUTH METHODS ====================
 
   Future<bool> signUp({
@@ -242,17 +262,54 @@ Future<bool> updateProfile({
     return false;
   }
 }
-  // ADD THIS METHOD FOR UPLOADING PROFILE IMAGES
-  Future<String?> uploadProfileImage(File imageFile) async {
+ 
+
+ Future<String?> uploadProfileImage(File imageFile) async {
     try {
-      final imageUrl = await _authService.uploadProfileImage(imageFile);
-      return imageUrl;
+      print('📤 Uploading profile image to local storage...');
+      final filePath = await _authService.uploadProfileImage(imageFile);
+      
+      // Update current user's photoURL with local file path
+      if (_currentUser != null && filePath != null) {
+        // Create a copy with updated photoURL
+        _currentUser = _currentUser!.copyWith(photoURL: filePath);
+        notifyListeners();
+      }
+      
+      return filePath;
     } catch (e) {
       _errorMessage = e.toString();
       notifyListeners();
       return null;
     }
   }
+
+  // Get profile image from local storage
+  Future<File?> getProfileImage() async {
+    try {
+      return await _authService.getProfileImage();
+    } catch (e) {
+      print('Error getting profile image: $e');
+      return null;
+    }
+  }
+
+  // Load profile image when user logs in
+  Future<void> _loadProfileImage() async {
+    try {
+      final imageFile = await _authService.getProfileImage();
+      if (imageFile != null && _currentUser != null) {
+        // Update current user with local image path
+        _currentUser = _currentUser!.copyWith(
+          photoURL: imageFile.path
+        );
+        notifyListeners();
+      }
+    } catch (e) {
+      print('Error loading profile image: $e');
+    }
+  }
+
 
   // ADD THIS METHOD FOR EMAIL VERIFICATION
   Future<bool> sendEmailVerification() async {

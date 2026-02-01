@@ -239,60 +239,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           );
         },
       ),
-      // Floating Action Button for cart
-      floatingActionButton: Consumer<CartProvider>(
-        builder: (context, cartProvider, child) {
-          // Get cart item count
-          final itemCount = _getCartItemCount(cartProvider);
-
-          return Transform.translate(
-            offset: Offset(0, _scrollOffset > 100 ? 100 : 0),
-            child: Opacity(
-              opacity: _scrollOffset > 100 ? 0 : 1,
-              child: AnimatedBuilder(
-                animation: _bounceAnimation,
-                builder: (context, child) {
-                  return Transform.translate(
-                    offset: Offset(0, _bounceAnimation.value),
-                    child: FloatingActionButton.extended(
-                      onPressed: () {
-                        Navigator.pushNamed(context, '/cart');
-                      },
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                      elevation: 12,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30),
-                      ),
-                      icon: Badge(
-                        label: Text(itemCount.toString()),
-                        backgroundColor: AppColors.accent,
-                        child: const Icon(Icons.shopping_bag_outlined),
-                      ),
-                      label: const Text('View Cart'),
-                    ),
-                  );
-                },
-              ),
-            ),
-          );
-        },
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+     
     );
   }
 
-  // Helper method to get cart item count
-  int _getCartItemCount(CartProvider cartProvider) {
-    // Try different possible property names
-    try {
-      // Only cartItems exists in CartProvider
-      return cartProvider.cartItems.length;
-    } catch (e) {
-      // Return 0 if there's an error
-      return 0;
-    }
-  }
 
   Widget _buildLoadingScreen() {
     return Center(
@@ -380,8 +330,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 Row(
                   children: [
                     InkWell(
-                      onTap: (){
-                          Navigator.pushNamed(context, '/orders');
+                      onTap: () {
+                        Navigator.pushNamed(context, '/orders');
                       },
                       child: Container(
                         padding: const EdgeInsets.all(8),
